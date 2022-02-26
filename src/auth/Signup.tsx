@@ -35,37 +35,48 @@ class Signup extends React.Component<Props, State> {
         this.setState({isSignUp: !this.state.isSignUp});
     }
 
-    handleSubmit = () => {
+    handleSubmit = async () => {
+        if (this.state.isSignUp) {
+        
         console.log('signup handle submit')
         let errorCode: number | string
 
         console.log(this.state.username, this.state.admin, this.state.password)
-        fetch(`http://localhost:4000/user/register`, {
-            mode: 'no-cors',
-            method: "POST",
-            body: JSON.stringify({ users: { username: this.state.username, admin: this.state.admin, password: this.state.password } }),
-            headers: new Headers({
-                "Content-Type": "application/json",
-            }),
-        })
-            .then((response) => {
-                console.log(`fetch successful ${response}`);
-                errorCode = response.status;
-                console.log(errorCode);
-                if (errorCode === 409) {
-                    this.setState({ message: 'Username already in use' });
-                    console.log(this.state.message);
-                } else if (errorCode === 500) {
-                    this.setState({ message: 'Failed to register user' });
-                    console.log(this.state.message);
-                }
-                return response.json();
+        try {
+            const registerResult = await fetch(`http://localhost:4000/user/register`, {
+                mode: 'cors',
+                method: "POST",
+                body: JSON.stringify({ user: { username: this.state.username, admin: this.state.admin, passwordhash: this.state.password } }),
+                headers: new Headers({
+                    "Content-Type": "application/json",
+                })
             })
-            .then((data) => {
-                console.log(data);
-                console.log(this.props.update);
-                this.props.update && this.props.update(data.sessionToken);
+            const registerResultJSON = await registerResult.json();
+            window.localStorage.setItem("userId", registerResultJSON.user.id)
+
+        } catch (error: any) {
+            if (error.code === 409) {
+                this.setState({ message: 'Username already in use' });
+                console.log(this.state.message);
+            } else if (error.code === 500) {
+                this.setState({ message: 'Failed to register user' });
+                console.log(this.state.message);
+            }
+        }
+
+        } else {
+            const loggedInUser = await fetch(`http://localhost:4000/user/login`, {
+                mode: 'cors',
+                method: "POST",
+                body: JSON.stringify({ user: { username: this.state.username, admin: this.state.admin, passwordhash: this.state.password } }),
+                headers: new Headers({
+                    "Content-Type": "application/json",
+                }),
             })
+            const loggedInUserDetails = await loggedInUser.json();
+            console.log("LOgged in user details", loggedInUserDetails);
+            window.localStorage.setItem("userId", loggedInUserDetails.user.id)
+        } 
     };
 
     validPassword = (value:string) => {
